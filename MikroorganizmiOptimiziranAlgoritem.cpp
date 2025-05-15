@@ -3,6 +3,7 @@
 #include <vector>
 #include <string>
 #include <windows.h>
+#include <chrono>
 
 void add_to_matrix(std::vector<std::vector<int>>& originalMatrix, std::vector<std::vector<int>>& newMatrix, const int& num, int& count, int& y, int& x, const int& w, const int& h);
 void itterative_discover_and_alocate(std::vector<std::vector<int>>& originalMatrix, std::vector<std::vector<int>>& newMatrix, const int& xOg, const int& yOg, const int& w, const int& h, const int& count);
@@ -60,7 +61,7 @@ void print_matrix_no_tabs(std::vector<std::vector<int>>& newMatrix, const int& w
 }
 
 
-std::vector<std::vector<int>> read_file_and_save_to_matrix(const std::string& filename, int& h, int& w) {
+std::vector<std::vector<int>> read_file_and_save_to_matrix(const std::string& filename, int& w, int& h) {
     std::ifstream file(filename);
     if (!file) {
         std::cerr << "Could not open file!\n";
@@ -84,10 +85,10 @@ std::vector<std::vector<int>> read_file_and_save_to_matrix(const std::string& fi
     return oldMatrix;
 }
 
-std::vector<std::vector<int>> create_new_matrix(std::vector<std::vector<int>>& oldMatrix, const int& h, const int& w) {
+std::vector<std::vector<int>> create_new_matrix(std::vector<std::vector<int>>& oldMatrix, const int& w, const int& h) {
     std::vector<std::vector<int>> newMatrix(h, std::vector<int>(w, 0));
     int count = 1;
-    print_matrix(oldMatrix, w, h);
+    //print_matrix(oldMatrix, w, h);
     for (int y = h - 1; y >= 0; y--) {
         for (int x = 0; x < w; x++) {
             if (oldMatrix[y][x] == 1 && newMatrix[y][x] == 0) {
@@ -105,130 +106,146 @@ std::vector<std::vector<int>> create_new_matrix(std::vector<std::vector<int>>& o
 
 //void recursive_discover(std::vector<std::vector<int>>& oldMatrix, std::vector<std::vector<int>>& newMatrix)
 void itterative_discover_and_alocate(std::vector<std::vector<int>>& originalMatrix, std::vector<std::vector<int>>& newMatrix, const int& xOg, const int& yOg, const int& w, const int& h, const int& count) {
-    bool flag = true;
-    int xCurr = xOg, yCurr = yOg;
-    while (flag) {
+    std::vector<std::pair<int, int>> rememberCoords = {};
+    int xCurr = xOg, yCurr = yOg, ones = 0;
+    bool middle = false, rightEdge = false, lowerEdge = false, leftEdge = false, upperEdge = false,
+        leftUpperCorner = false, rightUpperCorner = false, rightLowerCorner = false, leftLowerCorner = false,
+        right = false, down = false, left = false, up = false,
+        runCheckCurr = true, error = false;
+
+    if (w == 1 && h == 1) {
+        newMatrix[yCurr][xCurr] = count;
+        return;
+    }
+
+    while (runCheckCurr) {
         newMatrix[yCurr][xCurr] = count;
 
+        // find area
         if (yCurr != h - 1 && yCurr != 0 && xCurr != w - 1 && xCurr != 0) { // sredina
-            if (originalMatrix[yCurr][xCurr + 1] == 1 && newMatrix[yCurr][xCurr + 1] == 0) { // desno
-                xCurr++;
-            }
-            else if (originalMatrix[yCurr - 1][xCurr] == 1 && newMatrix[yCurr - 1][xCurr] == 0) { // spodaj
-                yCurr--;
-            }
-            else if (originalMatrix[yCurr][xCurr - 1] == 1 && newMatrix[yCurr][xCurr - 1] == 0) { // levo
-                xCurr--;
-            }
-            else if (originalMatrix[yCurr + 1][xCurr] == 1 && newMatrix[yCurr][xCurr - 1] == 0) { // zgoraj
-                yCurr++;
-            }
-            else {
-                flag = false;
-            }
+            middle = true;
         }
         else if (yCurr != h - 1 && yCurr != 0 && xCurr == w - 1) { // desni rob
-            if (originalMatrix[yCurr - 1][xCurr] == 1 && newMatrix[yCurr - 1][xCurr] == 0) { // spodaj
-                yCurr--;
-            }
-            else if (originalMatrix[yCurr][xCurr - 1] == 1 && newMatrix[yCurr][xCurr - 1] == 0) { // levo
-                xCurr--;
-            }
-            else if (originalMatrix[yCurr + 1][xCurr] == 1 && newMatrix[yCurr][xCurr - 1] == 0) { // zgoraj
-                yCurr++;
-            }
-            else {
-                flag = false;
-            }
+            rightEdge = true;
         }
         else if (yCurr == 0 && xCurr != 0 && xCurr != w - 1) { // spodnji rob
-            if (originalMatrix[yCurr][xCurr + 1] == 1 && newMatrix[yCurr][xCurr + 1] == 0) { // desno
-                xCurr++;
-            }
-            else if (originalMatrix[yCurr][xCurr - 1] == 1 && newMatrix[yCurr][xCurr - 1] == 0) { // levo
-                xCurr--;
-            }
-            else if (originalMatrix[yCurr + 1][xCurr] == 1 && newMatrix[yCurr][xCurr - 1] == 0) { // zgoraj
-                yCurr++;
-            }
-            else {
-                flag = false;
-            }
+            lowerEdge = true;
         }
         else if (yCurr != h - 1 && yCurr != 0 && xCurr == 0) { // levi rob
-            if (originalMatrix[yCurr][xCurr + 1] == 1 && newMatrix[yCurr][xCurr + 1] == 0) { // desno
-                xCurr++;
-            }
-            else if (originalMatrix[yCurr - 1][xCurr] == 1 && newMatrix[yCurr - 1][xCurr] == 0) { // spodaj
-                yCurr--;
-            }
-            else if (originalMatrix[yCurr + 1][xCurr] == 1 && newMatrix[yCurr - 1][xCurr] == 0) { // zgoraj
-                yCurr++;
-            }
-            else {
-                flag = false;
-            }
+            leftEdge = true;
         }
         else if (yCurr == h - 1 && xCurr != 0 && xCurr != w - 1) { // zgornji rob
-            if (originalMatrix[yCurr][xCurr + 1] == 1 && newMatrix[yCurr][xCurr + 1] == 0) { // desno
-                xCurr++;
-            }
-            else if (originalMatrix[yCurr - 1][xCurr] == 1 && newMatrix[yCurr - 1][xCurr] == 0) { // spodaj
-                yCurr--;
-            }
-            else if (originalMatrix[yCurr][xCurr - 1] == 1 && newMatrix[yCurr][xCurr - 1] == 0) { // levo
-                xCurr--;
-            }
-            else {
-                flag = false;
-            }
+            upperEdge = true;
         }
         else if (yCurr == h - 1 && xCurr == 0) { // kot, levo zgoraj
-            if (originalMatrix[yCurr][xCurr + 1] == 1 && newMatrix[yCurr][xCurr + 1] == 0) { // desno
-                xCurr++;
-            }
-            else if (originalMatrix[yCurr - 1][xCurr] == 1 && newMatrix[yCurr - 1][xCurr] == 0) { // spodaj
-                yCurr--;
-            }
-            else {
-                flag = false;
-            }
+            leftUpperCorner = true;
         }
         else if (yCurr == h - 1 && xCurr == w - 1) { // kot, desno zgoraj
-            if (originalMatrix[yCurr - 1][xCurr] == 1 && newMatrix[yCurr - 1][xCurr] == 0) { // spodaj
-                yCurr--;
-            }
-            else if (originalMatrix[yCurr][xCurr - 1] == 1 && newMatrix[yCurr][xCurr - 1] == 0) { // levo
-                xCurr--;
-            }
-            else {
-                flag = false;
-            }
+            rightUpperCorner = true;
         }
         else if (yCurr == 0 && xCurr == w - 1) { // kot, desno spodaj
-            if (originalMatrix[yCurr][xCurr - 1] == 1 && newMatrix[yCurr][xCurr - 1] == 0) { // levo
-                xCurr--;
-            }
-            else if (originalMatrix[yCurr + 1][xCurr] == 1 && newMatrix[yCurr][xCurr - 1] == 0) { // zgoraj
-                yCurr++;
-            }
-            else {
-                flag = false;
-            }
+            rightLowerCorner = true;
         }
         else if (yCurr == 0 && xCurr == 0) { // kot, levo spodaj
-            if (originalMatrix[yCurr][xCurr + 1] == 1 && newMatrix[yCurr][xCurr + 1] == 0) { // desno
-                xCurr++;
-            }
-            else if (originalMatrix[yCurr + 1][xCurr] == 1 && newMatrix[yCurr][xCurr - 1] == 0) { // zgoraj
-                yCurr++;
-            }
-            else {
-                flag = false;
-            }
+            leftLowerCorner = true;
         }
         else throw std::runtime_error("Error: No valid neighbor found");
+
+
+        if (middle) { // sredina
+            right = originalMatrix[yCurr][xCurr + 1] == 1 && newMatrix[yCurr][xCurr + 1] == 0;
+            down = originalMatrix[yCurr - 1][xCurr] == 1 && newMatrix[yCurr - 1][xCurr] == 0;
+            left = originalMatrix[yCurr][xCurr - 1] == 1 && newMatrix[yCurr][xCurr - 1] == 0;
+            up = originalMatrix[yCurr + 1][xCurr] == 1 && newMatrix[yCurr + 1][xCurr] == 0;
+        }
+        else if (rightEdge) { // desni rob
+            down = originalMatrix[yCurr - 1][xCurr] == 1 && newMatrix[yCurr - 1][xCurr] == 0;
+            left = originalMatrix[yCurr][xCurr - 1] == 1 && newMatrix[yCurr][xCurr - 1] == 0;
+            up = originalMatrix[yCurr + 1][xCurr] == 1 && newMatrix[yCurr + 1][xCurr] == 0;
+        }
+        else if (lowerEdge) { // spodnji rob
+            right = originalMatrix[yCurr][xCurr + 1] == 1 && newMatrix[yCurr][xCurr + 1] == 0;
+            left = originalMatrix[yCurr][xCurr - 1] == 1 && newMatrix[yCurr][xCurr - 1] == 0;
+            up = originalMatrix[yCurr + 1][xCurr] == 1 && newMatrix[yCurr + 1][xCurr] == 0;
+        }
+        else if (leftEdge) { // levi rob
+            right = originalMatrix[yCurr][xCurr + 1] == 1 && newMatrix[yCurr][xCurr + 1] == 0;
+            down = originalMatrix[yCurr - 1][xCurr] == 1 && newMatrix[yCurr - 1][xCurr] == 0;
+            up = originalMatrix[yCurr + 1][xCurr] == 1 && newMatrix[yCurr + 1][xCurr] == 0;
+        }
+        else if (upperEdge) { // zgornji rob
+            right = originalMatrix[yCurr][xCurr + 1] == 1 && newMatrix[yCurr][xCurr + 1] == 0;
+            down = originalMatrix[yCurr - 1][xCurr] == 1 && newMatrix[yCurr - 1][xCurr] == 0;
+            left = originalMatrix[yCurr][xCurr - 1] == 1 && newMatrix[yCurr][xCurr - 1] == 0;
+        }
+        else if (leftUpperCorner) { // kot, levo zgoraj
+            right = originalMatrix[yCurr][xCurr + 1] == 1 && newMatrix[yCurr][xCurr + 1] == 0;
+            down = originalMatrix[yCurr - 1][xCurr] == 1 && newMatrix[yCurr - 1][xCurr] == 0;
+        }
+        else if (rightUpperCorner) { // kot, desno zgoraj
+            down = originalMatrix[yCurr - 1][xCurr] == 1 && newMatrix[yCurr - 1][xCurr] == 0;
+            left = originalMatrix[yCurr][xCurr - 1] == 1 && newMatrix[yCurr][xCurr - 1] == 0;
+        }
+        else if (rightLowerCorner) { // kot, desno spodaj
+            left = originalMatrix[yCurr][xCurr - 1] == 1 && newMatrix[yCurr][xCurr - 1] == 0;
+            up = originalMatrix[yCurr + 1][xCurr] == 1 && newMatrix[yCurr + 1][xCurr] == 0;
+        }
+        else if (leftLowerCorner) { // kot, levo spodaj
+            right = originalMatrix[yCurr][xCurr + 1] == 1 && newMatrix[yCurr][xCurr + 1] == 0;
+            up = originalMatrix[yCurr + 1][xCurr] == 1 && newMatrix[yCurr + 1][xCurr] == 0;
+        }
+        else throw std::runtime_error("Error: No valid neighbor found");
+
+        if (right) ones++;
+        if (down) ones++;
+        if (left) ones++;
+        if (up) ones++;
+
+        if (ones == 0) runCheckCurr = false;
+        else if (ones > 1) {
+            while (ones > 1) {
+                if (right) {
+                    rememberCoords.push_back(std::make_pair(xCurr + 1, yCurr));
+                    right = false;
+                    ones--;
+                }
+                else if (down) {
+                    rememberCoords.push_back(std::make_pair(xCurr, yCurr - 1));
+                    down = false;
+                    ones--;
+                }
+                else if (left) {
+                    rememberCoords.push_back(std::make_pair(xCurr - 1, yCurr));
+                    left = false;
+                    ones--;
+                }
+                else if (up) {
+                    rememberCoords.push_back(std::make_pair(xCurr, yCurr + 1));
+                    up = false;
+                    ones--;
+                }
+            }
+        }
+        if (ones == 1) {
+            if (right) xCurr++;
+            else if (down) yCurr--;
+            else if (left) xCurr--;
+            else if (up) yCurr++;
+            else throw std::runtime_error("Error: No valid neighbor found");
+        }
+        // reset
+        ones = 0;
+        middle = false, rightEdge = false, lowerEdge = false, leftEdge = false, upperEdge = false,
+            leftUpperCorner = false, rightUpperCorner = false, rightLowerCorner = false, leftLowerCorner = false,
+            right = false, down = false, left = false, up = false,
+            error = false;
     }
+
+    for (const auto& coord : rememberCoords) {
+        itterative_discover_and_alocate(originalMatrix, newMatrix, coord.first, coord.second, w, h, count);
+    }
+
+    rememberCoords = {};
 
     return;
 }
@@ -315,17 +332,29 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
+    // Start timer
+    auto start = std::chrono::high_resolution_clock::now();
+
     int w, h;
-    std::vector <std::vector<int>> oldMatrix = read_file_and_save_to_matrix(argv[1], h, w);
-    std::vector <std::vector<int>> newMatrix = create_new_matrix(oldMatrix, h, w);
 
+    std::vector <std::vector<int>> oldMatrix = read_file_and_save_to_matrix(argv[1], w, h);
+    std::vector <std::vector<int>> newMatrix = create_new_matrix(oldMatrix, w, h);
 
+    ///*
     print_matrix_no_tabs(oldMatrix, w, h);
 
     std::cout << '\n';
     std::cout << '\n';
 
     print_matrix(newMatrix, w, h);
+    //*/
+
+    // End timer
+    auto end = std::chrono::high_resolution_clock::now();
+    auto duration_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+    auto duration_s = std::chrono::duration_cast<std::chrono::duration<double>>(end - start).count();
+
+    std::cout << "Elapsed time: " << duration_ms << " ms (" << duration_s << " s)" << std::endl;
 
     return 0;
 }
