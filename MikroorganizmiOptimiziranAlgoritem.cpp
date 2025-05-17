@@ -4,9 +4,10 @@
 #include <string>
 #include <windows.h>
 #include <chrono>
+#include <tuple>
+#include <unordered_map>
 
-void add_to_matrix(std::vector<std::vector<int>>& originalMatrix, std::vector<std::vector<int>>& newMatrix, const int& num, int& count, int& y, int& x, const int& w, const int& h);
-void itterative_discover_and_alocate(std::vector<std::vector<int>>& originalMatrix, std::vector<std::vector<int>>& newMatrix, const int& xOg, const int& yOg, const int& w, const int& h, const int& count);
+std::tuple<int, std::pair<int, int>, std::pair<int, int>> itterative_discover_and_alocate(std::vector<std::vector<int>>& originalMatrix, std::vector<std::vector<int>>& newMatrix, const int& xOg, const int& yOg, const int& w, const int& h, const int& count);
 
 void print_matrix(std::vector<std::vector<int>>& newMatrix, const int& w, const int& h) {
     // Get the console handle
@@ -61,6 +62,7 @@ void print_matrix_no_tabs(std::vector<std::vector<int>>& newMatrix, const int& w
 }
 
 
+
 std::vector<std::vector<int>> read_file_and_save_to_matrix(const std::string& filename, int& w, int& h) {
     std::ifstream file(filename);
     if (!file) {
@@ -87,16 +89,70 @@ std::vector<std::vector<int>> read_file_and_save_to_matrix(const std::string& fi
 
 std::vector<std::vector<int>> create_new_matrix(std::vector<std::vector<int>>& oldMatrix, const int& w, const int& h) {
     std::vector<std::vector<int>> newMatrix(h, std::vector<int>(w, 0));
+    std::vector<std::pair<int, std::vector<int>>> microorganismHolder;
+
+    std::vector<
+        std::pair<
+            /*points in microorganism, O(1) access->*/
+            int,
+            /*list of pairs and their corresponding matrices*/
+            std::unordered_multimap<
+                /*area ->*/
+                int, 
+                /*list of matrices ->*/
+                std::vector<
+                    /*matrix->*/
+                    std::vector<std::vector<int>>
+                >
+            >
+        >
+    > saveMicroorganisms;
+
+    std::vector<std::vector<int>> subregion;
+    std::tuple<int, std::pair<int, int>, std::pair<int, int>> tmp;
+    int xMin, xMax, yMin, yMax;
     int count = 1;
     //print_matrix(oldMatrix, w, h);
     for (int y = h - 1; y >= 0; y--) {
         for (int x = 0; x < w; x++) {
             if (oldMatrix[y][x] == 1 && newMatrix[y][x] == 0) {
+                tmp = itterative_discover_and_alocate(oldMatrix, newMatrix, x, y, w, h, count);
+                xMin = std::get<1>(tmp).first; xMax = std::get<1>(tmp).second; yMin = std::get<2>(tmp).first; yMax = std::get<2>(tmp).second;
+
+                // ||||||||||||||||||||||||||||||||||||||||||||||||||||||!!!!!!!!!!!!!!!!!!!!!!!!||||||||||||||||||||||||||||||||||||||||||||||||||||||
+                // ||||||||||||||||||||||||||||||||||||||||||||||||||||||!OPTIMIZIRAT IF NEED BE!||||||||||||||||||||||||||||||||||||||||||||||||||||||
+                // vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv!!!!!!!!!!!!!!!!!!!!!!!!vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+                for (int y = yMin; y <= yMax; y++) {
+                    std::vector<int> row;
+                    for (int x = xMin; x <= xMax; ++x) {
+                        int val = newMatrix[y][x];
+                        if (val != 0 && val != count)
+                            row.push_back(0);
+                        else
+                            row.push_back(val);
+                    }
+                    subregion.push_back(std::move(row));
+                }
+
+                //z onw notes, updejtat
+                //z onw notes, updejtat
+                //z onw notes, updejtat
+                //z onw notes, updejtat
+                //z onw notes, updejtat
+                saveMicroorganisms.push_back(std::make_pair(std::get<0>(tmp), std::make_pair((xMax - xMin) * (yMax - yMin), subregion)));
+                //z onw notes, updejtat
+                //z onw notes, updejtat
+                //z onw notes, updejtat
+                //z onw notes, updejtat
+                //z onw notes, updejtat
+
+                print_matrix(subregion, xMax - xMin + 1, yMax - yMin + 1);
+
                 print_matrix(newMatrix, w, h);
-                itterative_discover_and_alocate(oldMatrix, newMatrix, x, y, w, h, count);
+                std::cout << "numOfOnes: " << std::get<0>(tmp) << ", xMin: " << xMin << ", xMax : " << xMax << ", yMin : " << yMin << ", yMax : " << yMax << '\n';
                 count++;
+                subregion = {};
             }
-            //std::cout << newMatrix[y][x] << '\t';
         }
         std::cout << '\n';
     }
@@ -105,9 +161,13 @@ std::vector<std::vector<int>> create_new_matrix(std::vector<std::vector<int>>& o
 }
 
 //void recursive_discover(std::vector<std::vector<int>>& oldMatrix, std::vector<std::vector<int>>& newMatrix)
-void itterative_discover_and_alocate(std::vector<std::vector<int>>& originalMatrix, std::vector<std::vector<int>>& newMatrix, const int& xOg, const int& yOg, const int& w, const int& h, const int& count) {
+std::tuple<int, std::pair<int, int>, std::pair<int, int>> itterative_discover_and_alocate(std::vector<std::vector<int>>& originalMatrix, std::vector<std::vector<int>>& newMatrix, const int& xOg, const int& yOg, const int& w, const int& h, const int& count) {
+    if (newMatrix[yOg][xOg] != 0) {
+        return std::make_tuple(0, std::pair<int, int>(-1, -1), std::pair<int, int>(-1, -1));
+    }
+
     std::vector<std::pair<int, int>> rememberCoords = {};
-    int xCurr = xOg, yCurr = yOg, ones = 0;
+    int xCurr = xOg, yCurr = yOg, ones = 0, xMin = w, xMax = -1, yMin = h, yMax = -1, xMinTmp, xMaxTmp, yMinTmp, yMaxTmp, numOfOnes = 0;
     bool middle = false, rightEdge = false, lowerEdge = false, leftEdge = false, upperEdge = false,
         leftUpperCorner = false, rightUpperCorner = false, rightLowerCorner = false, leftLowerCorner = false,
         right = false, down = false, left = false, up = false,
@@ -115,11 +175,17 @@ void itterative_discover_and_alocate(std::vector<std::vector<int>>& originalMatr
 
     if (w == 1 && h == 1) {
         newMatrix[yCurr][xCurr] = count;
-        return;
+        return std::make_tuple(1, std::pair<int, int>(0, 0), std::pair<int, int>(0, 0));
     }
 
     while (runCheckCurr) {
         newMatrix[yCurr][xCurr] = count;
+        numOfOnes++;
+
+        if (xCurr < xMin) xMin = xCurr;
+        if (xCurr > xMax) xMax = xCurr;
+        if (yCurr < yMin) yMin = yCurr;
+        if (yCurr > yMax) yMax = yCurr;
 
         // find area
         if (yCurr != h - 1 && yCurr != 0 && xCurr != w - 1 && xCurr != 0) { // sredina
@@ -233,6 +299,7 @@ void itterative_discover_and_alocate(std::vector<std::vector<int>>& originalMatr
             else if (up) yCurr++;
             else throw std::runtime_error("Error: No valid neighbor found");
         }
+
         // reset
         ones = 0;
         middle = false, rightEdge = false, lowerEdge = false, leftEdge = false, upperEdge = false,
@@ -241,89 +308,22 @@ void itterative_discover_and_alocate(std::vector<std::vector<int>>& originalMatr
             error = false;
     }
 
+    std::tuple<int, std::pair<int, int>, std::pair<int, int>> tmp;
     for (const auto& coord : rememberCoords) {
-        itterative_discover_and_alocate(originalMatrix, newMatrix, coord.first, coord.second, w, h, count);
+        tmp = itterative_discover_and_alocate(originalMatrix, newMatrix, coord.first, coord.second, w, h, count);
+        xMinTmp = std::get<1>(tmp).first;
+        xMaxTmp = std::get<1>(tmp).second;
+        yMinTmp = std::get<2>(tmp).first;
+        yMaxTmp = std::get<2>(tmp).second;
+        if (xMinTmp == -1 || xMaxTmp == -1 || yMinTmp == -1 || yMaxTmp == -1) continue;
+        if (xMinTmp < xMin) xMin = xMinTmp;
+        if (xMaxTmp > xMax) xMax = xMaxTmp;
+        if (yMinTmp < yMin) yMin = yMinTmp;
+        if (yMaxTmp > yMax) yMax = yMaxTmp;
+        numOfOnes += std::get<0>(tmp);
     }
 
-    rememberCoords = {};
-
-    return;
-}
-
-void add_to_matrix(std::vector<std::vector<int>>& originalMatrix, std::vector<std::vector<int>>& newMatrix, const int& num, int& count, int& y, int& x, const int& w, const int& h) {
-    if (num == 1) {
-        if (y != h - 1 && x != 0 && y != 0 && x != w - 1) {
-            if (originalMatrix[y + 1][x] == 0 && originalMatrix[y][x - 1] == 0 && originalMatrix[y - 1][x] == 0 && originalMatrix[y][x + 1] == 0) {
-                newMatrix[y][x] = count;
-                count++;
-                return;
-            }
-            else {
-                if (originalMatrix[y + 1][x] != 0) {
-                    newMatrix[y][x] = originalMatrix[y + 1][x];
-                }
-                else if (originalMatrix[y][x - 1] != 0) {
-                    newMatrix[y][x] = originalMatrix[y][x - 1];
-                }
-                else if (originalMatrix[y - 1][x] != 0) {
-                    newMatrix[y][x] = originalMatrix[y - 1][x];
-                }
-                else if (originalMatrix[y][x + 1] != 0) {
-                    newMatrix[y][x] = originalMatrix[y][x + 1];
-                }
-                else {
-                    newMatrix[y][x] = count;
-                    count++;
-                }
-            }
-        }
-        else {
-            if (y != h - 1 && x == 0) {
-                newMatrix[y][x] = count;
-                count++;
-            }
-            else if (y == h - 1 && x == w - 1) {
-                if (originalMatrix[y][x - 1] != 0) {
-                    newMatrix[y][x] = originalMatrix[y][x - 1];
-                }
-                else if (originalMatrix[y - 1][x] != 0) {
-                    newMatrix[y][x] = originalMatrix[y - 1][x];
-                }
-                else {
-                    newMatrix[y][x] = count;
-                    count++;
-                }
-            }
-            else if (y == 0 && x == w - 1) {
-                if (originalMatrix[y - 1][x] != 0) {
-                }
-            }
-        }
-        /*
-        if (y != h - 1) {
-            if (originalMatrix[y + 1][x] != 0) {
-                newMatrix[y][x] = originalMatrix[y + 1][x];
-            }
-            else {
-                newMatrix[y][x] = count;
-                count++;
-            }
-            return;
-        }
-        if (x != 0) {
-            if (originalMatrix[y][x - 1] != 0) {
-                newMatrix[y][x] = originalMatrix[y][x - 1];
-            }
-            else {
-                newMatrix[y][x] = count;
-                count++;
-            }
-            return;
-        }
-        */
-
-        throw std::runtime_error("Error: No valid neighbor found");
-    }
+    return std::make_tuple(numOfOnes, std::make_pair(xMin, xMax), std::make_pair(yMin, yMax));
 }
 
 int main(int argc, char* argv[]) {
@@ -338,6 +338,7 @@ int main(int argc, char* argv[]) {
     int w, h;
 
     std::vector <std::vector<int>> oldMatrix = read_file_and_save_to_matrix(argv[1], w, h);
+    //print_matrix_no_tabs(oldMatrix, w, h);
     std::vector <std::vector<int>> newMatrix = create_new_matrix(oldMatrix, w, h);
 
     ///*
