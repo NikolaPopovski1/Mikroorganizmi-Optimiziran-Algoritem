@@ -145,6 +145,17 @@ std::unordered_map<int, std::unordered_multimap<int, std::vector<std::vector<int
     std::tuple<int, std::pair<int, int>, std::pair<int, int>> tmp;
     int xMin, xMax, yMin, yMax, numOfOnes, area;
     int count = 1;
+
+    // robni primer
+    if (w == 1 && h == 1) {
+        std::unordered_multimap<int, std::vector<std::vector<int>>> innerMap;
+        if (oldMatrix[0][0] == 1) {
+            innerMap.insert({ 1, {{1}} });
+            savedMicroorganisms.insert({ numOfOnes, innerMap });
+        }
+        return savedMicroorganisms;
+    }
+
     for (int y = h - 1; y >= 0; y--) {
         for (int x = 0; x < w; x++) {
             if (oldMatrix[y][x] == 1 && newMatrix[y][x] == 0) {
@@ -220,21 +231,12 @@ std::unordered_map<int, std::unordered_multimap<int, std::vector<std::vector<int
 }
 
 std::tuple<int, std::pair<int, int>, std::pair<int, int>> itterative_discover_and_alocate(std::vector<std::vector<int>>& originalMatrix, std::vector<std::vector<int>>& newMatrix, const int& xOg, const int& yOg, const int& w, const int& h, const int& count) {
-    if (newMatrix[yOg][xOg] != 0) {
-        return std::make_tuple(0, std::pair<int, int>(-1, -1), std::pair<int, int>(-1, -1));
-    }
-
     std::vector<std::pair<int, int>> rememberCoords = {};
     int xCurr = xOg, yCurr = yOg, ones = 0, xMin = w, xMax = -1, yMin = h, yMax = -1, xMinTmp, xMaxTmp, yMinTmp, yMaxTmp, numOfOnes = 0;
     bool middle = false, rightEdge = false, lowerEdge = false, leftEdge = false, upperEdge = false,
         leftUpperCorner = false, rightUpperCorner = false, rightLowerCorner = false, leftLowerCorner = false,
         right = false, down = false, left = false, up = false,
-        runCheckCurr = true, error = false;
-
-    if (w == 1 && h == 1) {
-        newMatrix[yCurr][xCurr] = count;
-        return std::make_tuple(1, std::pair<int, int>(0, 0), std::pair<int, int>(0, 0));
-    }
+        runCheckCurr = true;
 
     while (runCheckCurr) {
         newMatrix[yCurr][xCurr] = count;
@@ -325,7 +327,7 @@ std::tuple<int, std::pair<int, int>, std::pair<int, int>> itterative_discover_an
         if (left) ones++;
         if (up) ones++;
 
-        if (ones == 0) runCheckCurr = false;
+        if (ones == 0) break;
         else if (ones > 1) {
             while (ones > 1) {
                 if (right) {
@@ -350,25 +352,25 @@ std::tuple<int, std::pair<int, int>, std::pair<int, int>> itterative_discover_an
                 }
             }
         }
-        if (ones == 1) {
-            if (right) xCurr++;
-            else if (down) yCurr--;
-            else if (left) xCurr--;
-            else if (up) yCurr++;
-            else throw std::runtime_error("Error: No valid neighbor found");
-        }
+        if (right) xCurr++;
+        else if (down) yCurr--;
+        else if (left) xCurr--;
+        else if (up) yCurr++;
+        else throw std::runtime_error("Error: No valid neighbor found");
 
         // reset
         ones = 0;
         middle = false, rightEdge = false, lowerEdge = false, leftEdge = false, upperEdge = false,
             leftUpperCorner = false, rightUpperCorner = false, rightLowerCorner = false, leftLowerCorner = false,
-            right = false, down = false, left = false, up = false,
-            error = false;
+            right = false, down = false, left = false, up = false;
     }
 
     std::tuple<int, std::pair<int, int>, std::pair<int, int>> tmp;
     for (const auto& coord : rememberCoords) {
-        tmp = itterative_discover_and_alocate(originalMatrix, newMatrix, coord.first, coord.second, w, h, count);
+        if (newMatrix[coord.second][coord.first] == 0) {
+            tmp = itterative_discover_and_alocate(originalMatrix, newMatrix, coord.first, coord.second, w, h, count);
+        }
+        else continue;
         xMinTmp = std::get<1>(tmp).first;
         xMaxTmp = std::get<1>(tmp).second;
         yMinTmp = std::get<2>(tmp).first;
@@ -397,25 +399,30 @@ int main(int argc, char* argv[]) {
 
     std::vector <std::vector<int>> oldMatrix = read_file_and_save_to_matrix(argv[1], w, h);
     std::vector<std::vector<int>> newMatrix(h, std::vector<int>(w, 0));
-    //print_matrix_no_tabs(oldMatrix, w, h);
     std::unordered_map<int, std::unordered_multimap<int, std::vector<std::vector<int>>>> savedMicroorganisms = create_new_matrix(oldMatrix, newMatrix, w, h);
-
-    //iterate_and_print_saved_microorganisms(savedMicroorganisms);
 
     size_t count = 0;
     for (const auto& outer_pair : savedMicroorganisms) {
         const auto& inner_multimap = outer_pair.second;
         count += inner_multimap.size(); // each element's mapped value is one std::vector<std::vector<int>>
     }
-
-    std::cout << "RESULT: " << count << '\n';
+    std::cout << count << '\n';
 
     // End timer
     auto end = std::chrono::high_resolution_clock::now();
     auto duration_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
     auto duration_s = std::chrono::duration_cast<std::chrono::duration<double>>(end - start).count();
-
     std::cout << "Elapsed time: " << duration_ms << " ms (" << duration_s << " s)" << std::endl;
+
+    /*
+    for (const auto& outer_pair : savedMicroorganisms) {
+        int outer_key = outer_pair.first;
+        const auto& inner_multimap = outer_pair.second;
+        size_t count = inner_multimap.size();
+
+        std::cout << "Key " << outer_key << " has " << count << " elements.\n";
+    }
+    */
 
     return 0;
 }
