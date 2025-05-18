@@ -124,18 +124,22 @@ std::vector<std::vector<int>> read_file_and_save_to_matrix(const std::string& fi
     return oldMatrix;
 }
 
-std::unordered_map<int, std::unordered_multimap<int, std::vector<std::vector<int>>>> create_new_matrix(std::vector<std::vector<int>>& oldMatrix, std::vector<std::vector<int>>& newMatrix, const int& w, const int& h) {
+std::unordered_map<int, std::unordered_map<int, std::unordered_multimap<int, std::vector<std::vector<int>>>>> create_new_matrix(std::vector<std::vector<int>>& oldMatrix, std::vector<std::vector<int>>& newMatrix, const int& w, const int& h) {
     std::vector<std::pair<int, std::vector<int>>> microorganismHolder;
 
     std::unordered_map<
         /*points in microorganism, O(1) access->*/
         int,
         /*list of pairs and their corresponding matrices*/
-        std::unordered_multimap<
+        std::unordered_map<
             /*area ->*/
             int,
-            /*matrix->*/
-            std::vector<std::vector<int>>
+            std::unordered_multimap<
+                /*center x count*/
+                int,
+                /*matrix->*/
+                std::vector<std::vector<int>>
+            >
         >
     > savedMicroorganisms = {};
 
@@ -143,15 +147,28 @@ std::unordered_map<int, std::unordered_multimap<int, std::vector<std::vector<int
 
     std::vector<std::vector<int>> subregion, tmpVector;
     std::tuple<int, std::pair<int, int>, std::pair<int, int>> tmp;
-    int xMin, xMax, yMin, yMax, numOfOnes, area;
+    int xMin, xMax, yMin, yMax, numOfOnes, numOfOnesMiddleXAxis = 0, middleXAxis, area;
     int count = 1;
 
     // robni primer
     if (w == 1 && h == 1) {
-        std::unordered_multimap<int, std::vector<std::vector<int>>> innerMap;
         if (oldMatrix[0][0] == 1) {
-            innerMap.insert({ 1, {{1}} });
-            savedMicroorganisms.insert({ numOfOnes, innerMap });
+            std::vector<std::vector<int>> singleCellMatrix = { {1} };
+
+            int numOfOnes = 1;
+            int area = 1;
+            int centerXCount = 1;
+
+            // Ustvari notranji map: centerXCount -> matrika
+            std::unordered_multimap<int, std::vector<std::vector<int>>> centerMap;
+            centerMap.insert({ centerXCount, singleCellMatrix });
+
+            // Ustvari srednji map: area -> centerMap
+            std::unordered_map<int, std::unordered_multimap<int, std::vector<std::vector<int>>>> areaMap;
+            areaMap.insert({ area, centerMap });
+
+            // Shrani v glavni map
+            savedMicroorganisms.insert({ numOfOnes, areaMap });
         }
         return savedMicroorganisms;
     }
@@ -161,6 +178,8 @@ std::unordered_map<int, std::unordered_multimap<int, std::vector<std::vector<int
             if (oldMatrix[y][x] == 1 && newMatrix[y][x] == 0) {
                 tmp = itterative_discover_and_alocate(oldMatrix, newMatrix, x, y, w, h, count);
                 numOfOnes = std::get<0>(tmp); xMin = std::get<1>(tmp).first; xMax = std::get<1>(tmp).second; yMin = std::get<2>(tmp).first; yMax = std::get<2>(tmp).second;
+                middleXAxis = xMin + (xMax - xMin + 1) / 2;
+                numOfOnesMiddleXAxis = 0;
 
                 for (int y = yMin; y <= yMax; y++) {
                     std::vector<int> row;
@@ -170,8 +189,10 @@ std::unordered_map<int, std::unordered_multimap<int, std::vector<std::vector<int
                             row.push_back(0);
                         else if (val == 0)
                             row.push_back(0);
-                        else
+                        else {
                             row.push_back(1);
+                            if (x == middleXAxis) numOfOnesMiddleXAxis++;
+                        }
                     }
                     subregion.push_back(std::move(row));
                 }
@@ -182,36 +203,47 @@ std::unordered_map<int, std::unordered_multimap<int, std::vector<std::vector<int
                 bool add = true;
                 area = (xMax - xMin + 1) * (yMax - yMin + 1);
                 if (savedMicroorganisms.find(numOfOnes) != savedMicroorganisms.end()) {
-                    auto range = savedMicroorganisms[numOfOnes].equal_range(area);
-                    for (auto it = range.first; it != range.second; ++it) {
-                        tmpVector = it->second;
-                        if (tmpVector == subregion) {
-                            add = false;
-                            break;
+                    if (savedMicroorganisms[numOfOnes].find(area) != savedMicroorganisms[numOfOnes].end()) {
+                        auto range = savedMicroorganisms[numOfOnes][area].equal_range(numOfOnesMiddleXAxis);
+                        for (auto it = range.first; it != range.second; ++it) {
+                            tmpVector = it->second;
+                            if (tmpVector == subregion) {
+                                add = false;
+                                break;
+                            }
+                            rotate90Clockwise(subregion);
+                            if (tmpVector == subregion) {
+                                add = false;
+                                break;
+                            }
+                            rotate90Clockwise(subregion);
+                            if (tmpVector == subregion) {
+                                add = false;
+                                break;
+                            }
+                            rotate90Clockwise(subregion);
+                            if (tmpVector == subregion) {
+                                add = false;
+                                break;
+                            }
+                            rotate90Clockwise(subregion);
                         }
-                        rotate90Clockwise(subregion);
-                        if (tmpVector == subregion) {
-                            add = false;
-                            break;
-                        }
-                        rotate90Clockwise(subregion);
-                        if (tmpVector == subregion) {
-                            add = false;
-                            break;
-                        }
-                        rotate90Clockwise(subregion);
-                        if (tmpVector == subregion) {
-                            add = false;
-                            break;
-                        }
-                        rotate90Clockwise(subregion);
+                        if (add) savedMicroorganisms[numOfOnes][area].insert({ numOfOnesMiddleXAxis, subregion });
                     }
-                    if (add) savedMicroorganisms[numOfOnes].insert({ area, subregion });
+                    else {
+                        std::unordered_multimap<int, std::vector<std::vector<int>>> innerMap;
+                        innerMap.insert({ numOfOnesMiddleXAxis, subregion });
+                        std::unordered_map<int, std::unordered_multimap<int, std::vector<std::vector<int>>>> middleMap;
+                        middleMap.insert({ area, innerMap });
+                        savedMicroorganisms.insert({ numOfOnes, middleMap });;
+                    }
                 }
                 else {
                     std::unordered_multimap<int, std::vector<std::vector<int>>> innerMap;
-                    innerMap.insert({ area, subregion });
-                    savedMicroorganisms.insert({ numOfOnes, innerMap });
+                    innerMap.insert({ numOfOnesMiddleXAxis, subregion });
+                    std::unordered_map<int, std::unordered_multimap<int, std::vector<std::vector<int>>>> middleMap;
+                    middleMap.insert({ area, innerMap });
+                    savedMicroorganisms.insert({ numOfOnes, middleMap });
                 }
 
                 /*
@@ -220,7 +252,8 @@ std::unordered_map<int, std::unordered_multimap<int, std::vector<std::vector<int
                 std::cout << "numOfOnes: " << numOfOnes << ", xMin: " << xMin << ", xMax : " << xMax << ", yMin : " << yMin << ", yMax : " << yMax << '\n';
                 */
 
-                count++;
+                count++; 
+                area = 0;
                 subregion = {};
             }
         }
@@ -399,12 +432,15 @@ int main(int argc, char* argv[]) {
 
     std::vector <std::vector<int>> oldMatrix = read_file_and_save_to_matrix(argv[1], w, h);
     std::vector<std::vector<int>> newMatrix(h, std::vector<int>(w, 0));
-    std::unordered_map<int, std::unordered_multimap<int, std::vector<std::vector<int>>>> savedMicroorganisms = create_new_matrix(oldMatrix, newMatrix, w, h);
+    std::unordered_map<int, std::unordered_map<int, std::unordered_multimap<int, std::vector<std::vector<int>>>>> savedMicroorganisms = create_new_matrix(oldMatrix, newMatrix, w, h);
 
     size_t count = 0;
     for (const auto& outer_pair : savedMicroorganisms) {
-        const auto& inner_multimap = outer_pair.second;
-        count += inner_multimap.size(); // each element's mapped value is one std::vector<std::vector<int>>
+        const auto& middle_map = outer_pair.second;
+        for (const auto& middle_pair : middle_map) {
+            const auto& inner_multimap = middle_pair.second;
+            count += inner_multimap.size(); // each entry is one matrix
+        }
     }
     std::cout << count << '\n';
 
@@ -413,6 +449,11 @@ int main(int argc, char* argv[]) {
     auto duration_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
     auto duration_s = std::chrono::duration_cast<std::chrono::duration<double>>(end - start).count();
     std::cout << "Elapsed time: " << duration_ms << " ms (" << duration_s << " s)" << std::endl;
+
+    print_matrix_no_tabs(oldMatrix, w, h);
+    std::cout << '\n';
+    print_matrix(newMatrix, w, h);
+
 
     /*
     for (const auto& outer_pair : savedMicroorganisms) {
