@@ -60,6 +60,30 @@ void print_matrix_no_tabs(std::vector<std::vector<int>>& newMatrix, const int& w
         std::cout << '\n';
     }
 }
+void iterate_and_print_saved_microorganisms(
+    std::unordered_map<int, std::unordered_multimap<int, std::vector<std::vector<int>>>>& saveMicroorganisms
+) {
+    for (auto it = saveMicroorganisms.begin(); it != saveMicroorganisms.end(); ++it) {
+        int points = it->first;
+        auto& multimap = it->second;
+
+        std::cout << "Points: " << points << '\n';
+
+        for (auto mmIt = multimap.begin(); mmIt != multimap.end(); ++mmIt) {
+            int area = mmIt->first;
+            const auto& matrix = mmIt->second;
+
+            std::cout << "  Area: " << area << '\n';
+
+            // Use const_cast to get non-const reference for dimension extraction
+            auto& nonConstMatrix = const_cast<std::vector<std::vector<int>>&>(matrix);
+            int height = static_cast<int>(nonConstMatrix.size());
+            int width = height > 0 ? static_cast<int>(nonConstMatrix[0].size()) : 0;
+
+            print_matrix_no_tabs(nonConstMatrix, width, height);
+        }
+    }
+}
 
 
 
@@ -87,37 +111,32 @@ std::vector<std::vector<int>> read_file_and_save_to_matrix(const std::string& fi
     return oldMatrix;
 }
 
-std::vector<std::vector<int>> create_new_matrix(std::vector<std::vector<int>>& oldMatrix, const int& w, const int& h) {
-    std::vector<std::vector<int>> newMatrix(h, std::vector<int>(w, 0));
+std::unordered_map<int, std::unordered_multimap<int, std::vector<std::vector<int>>>> create_new_matrix(std::vector<std::vector<int>>& oldMatrix, std::vector<std::vector<int>>& newMatrix, const int& w, const int& h) {
     std::vector<std::pair<int, std::vector<int>>> microorganismHolder;
 
-    std::vector<
-        std::pair<
-            /*points in microorganism, O(1) access->*/
+    std::unordered_map<
+        /*points in microorganism, O(1) access->*/
+        int,
+        /*list of pairs and their corresponding matrices*/
+        std::unordered_multimap<
+            /*area ->*/
             int,
-            /*list of pairs and their corresponding matrices*/
-            std::unordered_multimap<
-                /*area ->*/
-                int, 
-                /*list of matrices ->*/
-                std::vector<
-                    /*matrix->*/
-                    std::vector<std::vector<int>>
-                >
-            >
+            /*matrix->*/
+            std::vector<std::vector<int>>
         >
-    > saveMicroorganisms;
+    > savedMicroorganisms = {};
+
+    print_matrix(oldMatrix, w, h);
 
     std::vector<std::vector<int>> subregion;
     std::tuple<int, std::pair<int, int>, std::pair<int, int>> tmp;
-    int xMin, xMax, yMin, yMax;
+    int xMin, xMax, yMin, yMax, numOfOnes;
     int count = 1;
-    //print_matrix(oldMatrix, w, h);
     for (int y = h - 1; y >= 0; y--) {
         for (int x = 0; x < w; x++) {
             if (oldMatrix[y][x] == 1 && newMatrix[y][x] == 0) {
                 tmp = itterative_discover_and_alocate(oldMatrix, newMatrix, x, y, w, h, count);
-                xMin = std::get<1>(tmp).first; xMax = std::get<1>(tmp).second; yMin = std::get<2>(tmp).first; yMax = std::get<2>(tmp).second;
+                numOfOnes = std::get<0>(tmp); xMin = std::get<1>(tmp).first; xMax = std::get<1>(tmp).second; yMin = std::get<2>(tmp).first; yMax = std::get<2>(tmp).second;
 
                 // ||||||||||||||||||||||||||||||||||||||||||||||||||||||!!!!!!!!!!!!!!!!!!!!!!!!||||||||||||||||||||||||||||||||||||||||||||||||||||||
                 // ||||||||||||||||||||||||||||||||||||||||||||||||||||||!OPTIMIZIRAT IF NEED BE!||||||||||||||||||||||||||||||||||||||||||||||||||||||
@@ -134,22 +153,21 @@ std::vector<std::vector<int>> create_new_matrix(std::vector<std::vector<int>>& o
                     subregion.push_back(std::move(row));
                 }
 
-                //z onw notes, updejtat
-                //z onw notes, updejtat
-                //z onw notes, updejtat
-                //z onw notes, updejtat
-                //z onw notes, updejtat
-                saveMicroorganisms.push_back(std::make_pair(std::get<0>(tmp), std::make_pair((xMax - xMin) * (yMax - yMin), subregion)));
-                //z onw notes, updejtat
-                //z onw notes, updejtat
-                //z onw notes, updejtat
-                //z onw notes, updejtat
-                //z onw notes, updejtat
+                if (savedMicroorganisms.find(numOfOnes) != savedMicroorganisms.end()) {
+                    savedMicroorganisms[numOfOnes].insert({ (xMax - xMin + 1) * (yMax - yMin + 1), subregion });
+                }
+                else {
+                    std::unordered_multimap<int, std::vector<std::vector<int>>> innerMap;
+                    innerMap.insert({ (xMax - xMin + 1) * (yMax - yMin + 1), subregion });
+                    savedMicroorganisms.insert({ numOfOnes, innerMap });
+                }
 
+                /*
                 print_matrix(subregion, xMax - xMin + 1, yMax - yMin + 1);
-
                 print_matrix(newMatrix, w, h);
-                std::cout << "numOfOnes: " << std::get<0>(tmp) << ", xMin: " << xMin << ", xMax : " << xMax << ", yMin : " << yMin << ", yMax : " << yMax << '\n';
+                std::cout << "numOfOnes: " << numOfOnes << ", xMin: " << xMin << ", xMax : " << xMax << ", yMin : " << yMin << ", yMax : " << yMax << '\n';
+                */
+
                 count++;
                 subregion = {};
             }
@@ -157,10 +175,9 @@ std::vector<std::vector<int>> create_new_matrix(std::vector<std::vector<int>>& o
         std::cout << '\n';
     }
 
-    return newMatrix;
+    return savedMicroorganisms;
 }
 
-//void recursive_discover(std::vector<std::vector<int>>& oldMatrix, std::vector<std::vector<int>>& newMatrix)
 std::tuple<int, std::pair<int, int>, std::pair<int, int>> itterative_discover_and_alocate(std::vector<std::vector<int>>& originalMatrix, std::vector<std::vector<int>>& newMatrix, const int& xOg, const int& yOg, const int& w, const int& h, const int& count) {
     if (newMatrix[yOg][xOg] != 0) {
         return std::make_tuple(0, std::pair<int, int>(-1, -1), std::pair<int, int>(-1, -1));
@@ -338,17 +355,11 @@ int main(int argc, char* argv[]) {
     int w, h;
 
     std::vector <std::vector<int>> oldMatrix = read_file_and_save_to_matrix(argv[1], w, h);
+    std::vector<std::vector<int>> newMatrix(h, std::vector<int>(w, 0));
     //print_matrix_no_tabs(oldMatrix, w, h);
-    std::vector <std::vector<int>> newMatrix = create_new_matrix(oldMatrix, w, h);
+    std::unordered_map<int, std::unordered_multimap<int, std::vector<std::vector<int>>>> savedMicroorganisms = create_new_matrix(oldMatrix, newMatrix, w, h);
 
-    ///*
-    print_matrix_no_tabs(oldMatrix, w, h);
-
-    std::cout << '\n';
-    std::cout << '\n';
-
-    print_matrix(newMatrix, w, h);
-    //*/
+    iterate_and_print_saved_microorganisms(savedMicroorganisms);
 
     // End timer
     auto end = std::chrono::high_resolution_clock::now();
