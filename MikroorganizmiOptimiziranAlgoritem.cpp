@@ -132,7 +132,7 @@ std::unordered_map<int, std::unordered_multimap<int, std::vector<std::vector<int
         int,
         /*list of pairs and their corresponding matrices*/
         std::unordered_multimap<
-            /*area ->*/
+            /*area + hash->*/
             int,
             /*matrix->*/
             std::vector<std::vector<int>>
@@ -143,7 +143,7 @@ std::unordered_map<int, std::unordered_multimap<int, std::vector<std::vector<int
 
     std::vector<std::vector<int>> subregion, tmpVector;
     std::tuple<int, std::pair<int, int>, std::pair<int, int>> tmp;
-    int xMin, xMax, yMin, yMax, numOfOnes, area;
+    int xMin, xMax, yMin, yMax, numOfOnes, area = 0, yForHash = 0, yMaxForHash = -1, xForHash = 1, widthOfHash = 0;
     int count = 1;
 
     // robni primer
@@ -161,26 +161,33 @@ std::unordered_map<int, std::unordered_multimap<int, std::vector<std::vector<int
             if (oldMatrix[y][x] == 1 && newMatrix[y][x] == 0) {
                 tmp = itterative_discover_and_alocate(oldMatrix, newMatrix, x, y, w, h, count);
                 numOfOnes = std::get<0>(tmp); xMin = std::get<1>(tmp).first; xMax = std::get<1>(tmp).second; yMin = std::get<2>(tmp).first; yMax = std::get<2>(tmp).second;
+                area = (xMax - xMin + 1) * (yMax - yMin + 1);
 
-                for (int y = yMin; y <= yMax; y++) {
+                yMaxForHash = xMax - xMin + 1;
+                for (int y = yMax; y >= yMin; y--) {
                     std::vector<int> row;
                     for (int x = xMin; x <= xMax; ++x) {
+                        xForHash++;
                         int val = newMatrix[y][x];
                         if (val != 0 && val != count)
                             row.push_back(0);
                         else if (val == 0)
                             row.push_back(0);
-                        else
+                        else {
                             row.push_back(1);
+                            if (x == xMin || x == xMax || y == yMax || y == yMin) area++;
+                        }
                     }
                     subregion.push_back(std::move(row));
                 }
+
+
 
                 // ||||||||||||||||||||||||||||||||||||||||||||||||||||||!!!!!!!!!!!!!!!!!!!!!!!!||||||||||||||||||||||||||||||||||||||||||||||||||||||
                 // ||||||||||||||||||||||||||||||||||||||||||||||||||||||!OPTIMIZIRAT IF NEED BE!||||||||||||||||||||||||||||||||||||||||||||||||||||||
                 // vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv!!!!!!!!!!!!!!!!!!!!!!!!vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
                 bool add = true;
-                area = (xMax - xMin + 1) * (yMax - yMin + 1);
+                area += (xMax - xMin + 1) * (yMax - yMin + 1);
                 if (savedMicroorganisms.find(numOfOnes) != savedMicroorganisms.end()) {
                     auto range = savedMicroorganisms[numOfOnes].equal_range(area);
                     for (auto it = range.first; it != range.second; ++it) {
@@ -221,6 +228,7 @@ std::unordered_map<int, std::unordered_multimap<int, std::vector<std::vector<int
                 */
 
                 count++;
+                area = 0;
                 subregion = {};
             }
         }
