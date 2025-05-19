@@ -139,8 +139,6 @@ std::unordered_map<int, std::unordered_multimap<int, std::vector<std::vector<int
         >
     > savedMicroorganisms = {};
 
-    //print_matrix(oldMatrix, w, h);
-
     std::vector<std::vector<int>> subregion, tmpVector;
     std::tuple<int, std::pair<int, int>, std::pair<int, int>> tmp;
     int xMin, xMax, yMin, yMax, numOfOnes, area = 0, yForHash = 0, yMaxForHash = -1, xForHash = 1, widthOfHash = 0;
@@ -181,11 +179,6 @@ std::unordered_map<int, std::unordered_multimap<int, std::vector<std::vector<int
                     subregion.push_back(std::move(row));
                 }
 
-
-
-                // ||||||||||||||||||||||||||||||||||||||||||||||||||||||!!!!!!!!!!!!!!!!!!!!!!!!||||||||||||||||||||||||||||||||||||||||||||||||||||||
-                // ||||||||||||||||||||||||||||||||||||||||||||||||||||||!OPTIMIZIRAT IF NEED BE!||||||||||||||||||||||||||||||||||||||||||||||||||||||
-                // vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv!!!!!!!!!!!!!!!!!!!!!!!!vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
                 bool add = true;
                 area += (xMax - xMin + 1) * (yMax - yMin + 1);
                 if (savedMicroorganisms.find(numOfOnes) != savedMicroorganisms.end()) {
@@ -221,18 +214,11 @@ std::unordered_map<int, std::unordered_multimap<int, std::vector<std::vector<int
                     savedMicroorganisms.insert({ numOfOnes, innerMap });
                 }
 
-                /*
-                print_matrix(subregion, xMax - xMin + 1, yMax - yMin + 1);
-                print_matrix(newMatrix, w, h);
-                std::cout << "numOfOnes: " << numOfOnes << ", xMin: " << xMin << ", xMax : " << xMax << ", yMin : " << yMin << ", yMax : " << yMax << '\n';
-                */
-
                 count++;
                 area = 0;
                 subregion = {};
             }
         }
-        //std::cout << '\n';
     }
 
     return savedMicroorganisms;
@@ -416,20 +402,12 @@ int main(int argc, char* argv[]) {
     }
     std::cout << count << '\n';
 
+    /*
     // End timer
     auto end = std::chrono::high_resolution_clock::now();
     auto duration_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
     auto duration_s = std::chrono::duration_cast<std::chrono::duration<double>>(end - start).count();
     std::cout << "Elapsed time: " << duration_ms << " ms (" << duration_s << " s)" << std::endl;
-
-    /*
-    for (const auto& outer_pair : savedMicroorganisms) {
-        int outer_key = outer_pair.first;
-        const auto& inner_multimap = outer_pair.second;
-        size_t count = inner_multimap.size();
-
-        std::cout << "Key " << outer_key << " has " << count << " elements.\n";
-    }
     */
 
     return 0;
